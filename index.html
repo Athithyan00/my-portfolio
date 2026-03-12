@@ -2153,7 +2153,8 @@
         </div>
       </div>
       <div class="contact-right fade-in" style="transition-delay: 0.15s">
-        <form id="contactForm">
+        <form id="contactForm" name="contact" method="POST" data-netlify="true">
+          <input type="hidden" name="form-name" value="contact" />
           <div class="form-group">
             <label>Your Name <span style="color: var(--rust)">*</span></label>
             <input type="text" id="f-name" name="name" placeholder="John Doe" />
@@ -2249,7 +2250,7 @@
         }, 4000);
       }
 
-      // ── CONTACT FORM — fetch to send-email.php (stays on page) ──
+      // ── CONTACT FORM — Netlify Forms (no backend needed) ────────
       document
         .getElementById("contactForm")
         .addEventListener("submit", async function (e) {
@@ -2274,29 +2275,22 @@
           icon.className = "fas fa-spinner fa-spin";
 
           try {
-            // Use FormData so PHP reads $_POST normally
             var formData = new FormData();
+            formData.append("form-name", "contact");
             formData.append("name", name);
             formData.append("email", email);
             formData.append("subject", subject);
             formData.append("message", message);
 
-            var res = await fetch("send-email.php", {
-              method: "POST",
-              body: formData,
-            });
-            var data = await res.json();
-            if (data.success) {
+            var res = await fetch("/", { method: "POST", body: formData });
+            if (res.ok) {
               showToast("Message sent! I'll get back to you soon.", "success");
               document.getElementById("contactForm").reset();
             } else {
-              throw new Error(data.error || "Submission failed");
+              throw new Error("Submission failed");
             }
           } catch (err) {
-            showToast(
-              err.message || "Failed to send. Please email me directly.",
-              "error",
-            );
+            showToast("Failed to send. Please email me directly.", "error");
           } finally {
             btn.disabled = false;
             icon.className = "fas fa-arrow-right";
