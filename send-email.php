@@ -1,36 +1,39 @@
 <?php
+
 /**
  * send-email.php — Portfolio contact form mailer
- * Uses PHP built-in mail() — no SMTP, no app password, no libraries.
- * Works on any shared hosting (Hostinger, cPanel, etc.) out of the box.
+ * Called via fetch() from index.html — returns JSON, never redirects.
+ * Uses PHP built-in mail(). No SMTP, no app password, no libraries.
  */
 
-// ── CONFIG ─────────────────────────────────────────────────────────
-define('YOUR_EMAIL', 'athithyanadhi00@gmail.com');
-// ──────────────────────────────────────────────────────────────────
+header('Content-Type: application/json');
 
-// Only accept POST
+// ── CONFIG ──────────────────────────────────────────────────────────
+define('YOUR_EMAIL', 'athithyanadhi00@gmail.com');
+// ───────────────────────────────────────────────────────────────────
+
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header('Location: index.html');
-    exit;
+  http_response_code(405);
+  echo json_encode(['success' => false, 'error' => 'Method not allowed.']);
+  exit;
 }
 
-// ── Read & sanitise ────────────────────────────────────────────────
+// ── Read & sanitise ─────────────────────────────────────────────────
 $name    = isset($_POST['name'])    ? trim(strip_tags($_POST['name']))    : '';
 $email   = isset($_POST['email'])   ? trim(strip_tags($_POST['email']))   : '';
 $subject = isset($_POST['subject']) ? trim(strip_tags($_POST['subject'])) : '';
 $message = isset($_POST['message']) ? trim(strip_tags($_POST['message'])) : '';
 
-// ── Validate ───────────────────────────────────────────────────────
-$errors = [];
-if (!$name)    $errors[] = 'Name is required.';
-if (!$email)   $errors[] = 'Email is required.';
-if ($email && !filter_var($email, FILTER_VALIDATE_EMAIL)) $errors[] = 'Invalid email.';
-if (!$message) $errors[] = 'Message is required.';
-
-if ($errors) {
-    header('Location: index.html?status=error&msg=' . urlencode(implode(' ', $errors)));
-    exit;
+// ── Validate ────────────────────────────────────────────────────────
+if (!$name || !$email || !$message) {
+  http_response_code(400);
+  echo json_encode(['success' => false, 'error' => 'Name, email and message are required.']);
+  exit;
+}
+if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+  http_response_code(400);
+  echo json_encode(['success' => false, 'error' => 'Invalid email address.']);
+  exit;
 }
 
 $mailSubject = $subject ? "Portfolio Contact: {$subject}" : 'Portfolio Contact Form Submission';
@@ -39,7 +42,7 @@ $safeEmail   = htmlspecialchars($email,   ENT_QUOTES, 'UTF-8');
 $safeSubject = htmlspecialchars($subject ?: '—', ENT_QUOTES, 'UTF-8');
 $safeMessage = htmlspecialchars($message, ENT_QUOTES, 'UTF-8');
 
-// ── Email to YOU ───────────────────────────────────────────────────
+// ── Email to YOU ────────────────────────────────────────────────────
 $ownerHeaders  = "MIME-Version: 1.0\r\n";
 $ownerHeaders .= "Content-Type: text/html; charset=UTF-8\r\n";
 $ownerHeaders .= "From: Portfolio Contact <" . YOUR_EMAIL . ">\r\n";
@@ -73,7 +76,7 @@ $ownerBody = "
   </p>
 </div>";
 
-// ── Auto-reply to the SENDER ───────────────────────────────────────
+// ── Auto-reply to SENDER ────────────────────────────────────────────
 $senderHeaders  = "MIME-Version: 1.0\r\n";
 $senderHeaders .= "Content-Type: text/html; charset=UTF-8\r\n";
 $senderHeaders .= "From: Athithyan P <" . YOUR_EMAIL . ">\r\n";
@@ -97,13 +100,13 @@ $senderBody = "
   </p>
 </div>";
 
-// ── Send ───────────────────────────────────────────────────────────
+// ── Send & respond with JSON ────────────────────────────────────────
 $sent = mail(YOUR_EMAIL, $mailSubject, $ownerBody, $ownerHeaders);
 mail($email, "Thanks for reaching out — I'll get back to you soon!", $senderBody, $senderHeaders);
 
 if ($sent) {
-    header('Location: index.html?status=success');
+  echo json_encode(['success' => true]);
 } else {
-    header('Location: index.html?status=error&msg=' . urlencode('Mail could not be sent. Please email me directly.'));
+  http_response_code(500);
+  echo json_encode(['success' => false, 'error' => 'Mail could not be sent. Please email me directly.']);
 }
-exit;
