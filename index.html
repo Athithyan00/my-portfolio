@@ -1083,7 +1083,7 @@
         <div class="hero-ctas">
           <a href="#projects" class="btn-primary">View Projects</a>
           <a href="Athithyan-P_Resume.pdf" class="btn-outline" download
-            >Download Resume</a
+            >Download CV</a
           >
         </div>
       </div>
@@ -2153,10 +2153,10 @@
         </div>
       </div>
       <div class="contact-right fade-in" style="transition-delay: 0.15s">
-        <form action="send-email.php" method="POST">
+        <form id="contactForm">
           <div class="form-group">
             <label>Your Name <span style="color: var(--rust)">*</span></label>
-            <input type="text" name="name" placeholder="John Doe" required />
+            <input type="text" id="f-name" name="name" placeholder="John Doe" />
           </div>
           <div class="form-group">
             <label
@@ -2164,26 +2164,31 @@
             >
             <input
               type="email"
+              id="f-email"
               name="email"
               placeholder="john@example.com"
-              required
             />
           </div>
           <div class="form-group">
             <label>Subject</label>
-            <input type="text" name="subject" placeholder="Project Inquiry" />
+            <input
+              type="text"
+              id="f-subject"
+              name="subject"
+              placeholder="Project Inquiry"
+            />
           </div>
           <div class="form-group">
             <label>Message <span style="color: var(--rust)">*</span></label>
             <textarea
               rows="5"
+              id="f-message"
               name="message"
               placeholder="Tell me about your project..."
-              required
             ></textarea>
           </div>
-          <button type="submit" class="form-submit">
-            Send Message <i class="fas fa-arrow-right"></i>
+          <button type="submit" class="form-submit" id="submitBtn">
+            Send Message <i class="fas fa-arrow-right" id="submitIcon"></i>
           </button>
         </form>
       </div>
@@ -2244,21 +2249,59 @@
         }, 4000);
       }
 
-      // ── READ ?status= from PHP redirect & show toast ──────
-      (function () {
-        var params = new URLSearchParams(window.location.search);
-        var status = params.get("status");
-        if (status === "success") {
-          showToast("Message sent! I\'ll get back to you soon.", "success");
-          history.replaceState(null, "", window.location.pathname + "#contact");
-        } else if (status === "error") {
-          var msg =
-            params.get("msg") ||
-            "Something went wrong. Please email me directly.";
-          showToast(msg, "error");
-          history.replaceState(null, "", window.location.pathname + "#contact");
-        }
-      })();
+      // ── CONTACT FORM — fetch to send-email.php (stays on page) ──
+      document
+        .getElementById("contactForm")
+        .addEventListener("submit", async function (e) {
+          e.preventDefault();
+          var btn = document.getElementById("submitBtn");
+          var icon = document.getElementById("submitIcon");
+          var name = document.getElementById("f-name").value.trim();
+          var email = document.getElementById("f-email").value.trim();
+          var subject = document.getElementById("f-subject").value.trim();
+          var message = document.getElementById("f-message").value.trim();
+
+          if (!name || !email || !message) {
+            showToast("Please fill in all required fields.", "error");
+            return;
+          }
+          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            showToast("Please enter a valid email address.", "error");
+            return;
+          }
+
+          btn.disabled = true;
+          icon.className = "fas fa-spinner fa-spin";
+
+          try {
+            // Use FormData so PHP reads $_POST normally
+            var formData = new FormData();
+            formData.append("name", name);
+            formData.append("email", email);
+            formData.append("subject", subject);
+            formData.append("message", message);
+
+            var res = await fetch("send-email.php", {
+              method: "POST",
+              body: formData,
+            });
+            var data = await res.json();
+            if (data.success) {
+              showToast("Message sent! I'll get back to you soon.", "success");
+              document.getElementById("contactForm").reset();
+            } else {
+              throw new Error(data.error || "Submission failed");
+            }
+          } catch (err) {
+            showToast(
+              err.message || "Failed to send. Please email me directly.",
+              "error",
+            );
+          } finally {
+            btn.disabled = false;
+            icon.className = "fas fa-arrow-right";
+          }
+        });
 
       // ── CURSOR ─────────────────────────────────────────────
       var dot = document.getElementById("cursorDot");
@@ -2294,6 +2337,7 @@
             ring.style.opacity = "0.6";
           });
         });
+
       // ── SCROLL ANIMATIONS ──────────────────────────────────
       var io = new IntersectionObserver(
         function (entries) {
