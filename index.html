@@ -44,33 +44,6 @@
         font-size: 16px;
         line-height: 1.6;
         overflow-x: hidden;
-        cursor: none;
-      }
-
-      /* CURSOR */
-      .cursor {
-        position: fixed;
-        pointer-events: none;
-        z-index: 9999;
-        mix-blend-mode: multiply;
-      }
-      .cursor-dot {
-        width: 8px;
-        height: 8px;
-        background: var(--rust);
-        border-radius: 50%;
-        transform: translate(-50%, -50%);
-      }
-      .cursor-ring {
-        width: 36px;
-        height: 36px;
-        border: 1.5px solid var(--rust);
-        border-radius: 50%;
-        transform: translate(-50%, -50%);
-        transition:
-          width 0.2s,
-          height 0.2s;
-        opacity: 0.6;
       }
 
       /* NAV */
@@ -84,7 +57,6 @@
         justify-content: space-between;
         align-items: center;
         padding: 1.4rem 4rem;
-        mix-blend-mode: multiply;
       }
       .nav-logo {
         font-family: var(--display);
@@ -92,6 +64,7 @@
         letter-spacing: 2px;
         color: var(--ink);
         text-decoration: none;
+        transition: color 0.3s ease;
       }
       .nav-links {
         display: flex;
@@ -105,10 +78,23 @@
         text-transform: uppercase;
         color: var(--muted);
         text-decoration: none;
-        transition: color 0.2s;
+        transition:
+          color 0.2s,
+          color 0.3s ease;
       }
       .nav-links a:hover {
         color: var(--rust);
+      }
+      /* When nav is scrolled over a dark section (Skills / Services),
+         flip the logo + links to cream/white. Elsewhere it stays dark. */
+      nav.nav-on-dark .nav-logo {
+        color: var(--cream);
+      }
+      nav.nav-on-dark .nav-links a {
+        color: rgba(240, 235, 227, 0.65);
+      }
+      nav.nav-on-dark .nav-links a:hover {
+        color: var(--rust-light);
       }
 
       /* HERO */
@@ -179,7 +165,6 @@
         text-transform: uppercase;
         text-decoration: none;
         border: none;
-        cursor: none;
         transition: background 0.25s;
       }
       .btn-primary:hover {
@@ -194,7 +179,6 @@
         letter-spacing: 2px;
         text-transform: uppercase;
         text-decoration: none;
-        cursor: none;
         transition:
           border-color 0.25s,
           color 0.25s;
@@ -635,7 +619,6 @@
         background: var(--cream);
         border: 1px solid var(--border);
         overflow: hidden;
-        cursor: none;
         opacity: 0;
         transform: translateY(30px);
         transition:
@@ -720,7 +703,6 @@
         transition:
           border-color 0.3s,
           background 0.3s;
-        cursor: none;
       }
       .service-card:hover {
         border-color: var(--rust);
@@ -837,7 +819,6 @@
         outline: none;
         transition: border-color 0.2s;
         resize: none;
-        cursor: none;
       }
       .form-group input:focus,
       .form-group textarea:focus {
@@ -859,7 +840,6 @@
         font-size: 0.72rem;
         letter-spacing: 2px;
         text-transform: uppercase;
-        cursor: none;
         margin-top: 0.5rem;
         transition: background 0.2s;
       }
@@ -1050,9 +1030,6 @@
       var PROFILE_IMAGE_URL = "./assets/profile-image.webp";
     </script>
 
-    <div class="cursor cursor-dot" id="cursorDot"></div>
-    <div class="cursor cursor-ring" id="cursorRing"></div>
-
     <div class="toast" id="toast">
       <i id="toastIcon" class="fas fa-check-circle"></i>
       <span id="toastMsg"></span>
@@ -1082,8 +1059,8 @@
         </p>
         <div class="hero-ctas">
           <a href="#projects" class="btn-primary">View Projects</a>
-          <a href="Athithyan-P_Resume.pdf" class="btn-outline" download
-            >Download CV</a
+          <a href="ATHITHYAN-P-MERN-DEV.pdf" class="btn-outline" download
+            >Download Resume</a
           >
         </div>
       </div>
@@ -2297,40 +2274,29 @@
           }
         });
 
-      // ── CURSOR ─────────────────────────────────────────────
-      var dot = document.getElementById("cursorDot");
-      var ring = document.getElementById("cursorRing");
-      var mx = 0,
-        my = 0,
-        rx = 0,
-        ry = 0;
-      document.addEventListener("mousemove", function (e) {
-        mx = e.clientX;
-        my = e.clientY;
-        dot.style.left = mx + "px";
-        dot.style.top = my + "px";
-      });
-      (function tick() {
-        rx += (mx - rx) * 0.12;
-        ry += (my - ry) * 0.12;
-        ring.style.left = rx + "px";
-        ring.style.top = ry + "px";
-        requestAnimationFrame(tick);
-      })();
-      document
-        .querySelectorAll("a,button,.project-card,.service-card,.skill-item")
-        .forEach(function (el) {
-          el.addEventListener("mouseenter", function () {
-            ring.style.width = "56px";
-            ring.style.height = "56px";
-            ring.style.opacity = "0.4";
-          });
-          el.addEventListener("mouseleave", function () {
-            ring.style.width = "36px";
-            ring.style.height = "36px";
-            ring.style.opacity = "0.6";
-          });
+      // ── NAV COLOR SWITCH (dark section detection) ──────────
+      // Sections with a black/ink background — nav text turns white
+      // whenever it's floating over one of these; everywhere else
+      // (cream/light sections) the nav stays dark.
+      var navEl = document.querySelector("nav");
+      var darkSections = [
+        document.getElementById("skills"),
+        document.getElementById("services"),
+      ].filter(Boolean);
+
+      function updateNavTheme() {
+        var navHeight = navEl.offsetHeight;
+        var probeY = navHeight / 2; // point just under the navbar
+        var isOverDark = darkSections.some(function (sec) {
+          var r = sec.getBoundingClientRect();
+          return r.top <= probeY && r.bottom >= probeY;
         });
+        navEl.classList.toggle("nav-on-dark", isOverDark);
+      }
+
+      window.addEventListener("scroll", updateNavTheme, { passive: true });
+      window.addEventListener("resize", updateNavTheme);
+      updateNavTheme();
 
       // ── SCROLL ANIMATIONS ──────────────────────────────────
       var io = new IntersectionObserver(
